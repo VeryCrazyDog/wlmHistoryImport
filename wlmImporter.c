@@ -1,0 +1,527 @@
+/*
+ *
+ * FileName: wlmImporter.c
+ * Description: This file contains functions for importing Windows Live Messenger history
+ *
+ */
+
+#include "WLMHistoryImport.h"
+#include "resource.h"
+
+#include <time.h>
+#include <assert.h>
+
+#include "libparsifal/parsifal.h"
+#pragma comment(lib, "libparsifal/parsifal.lib")
+
+#include "tagStack.h"
+#include "userNameList.h"
+
+//// All XML tags appear in Windows Live Messenger history database
+// Reserved value
+#define TAG_OTHER		0
+// Start of the log
+#define TAG_LOG			1
+// New message event
+#define TAG_MESSAGE		2
+// New invitation event / New incoming file event
+#define TAG_INV			3
+// New invitation response event / File received event / Send file fail event
+#define TAG_INVRESP		4
+// Chat room joined event
+#define TAG_JOIN		5
+// Chat room left event
+#define TAG_LEAVE		6
+// Start of sender details
+#define TAG_FROM		7
+// Start of receiver details
+#define TAG_TO			8
+// User name
+#define TAG_USER		9
+// Requested application name
+#define TAG_APP			10
+// Description of the event / Message of message event
+#define TAG_TEXT		11
+// Path of the file that is sent / received
+#define TAG_FILE		12
+
+// Number of duplicated message during the import
+DWORD nDupes;
+// Number of skipped message during import
+DWORD nSkippedChat;
+// Number of failed import message during import
+DWORD nFailed;
+// Number of message imported
+DWORD nImportedMessagesCount;
+// A list of user name that is belong to the owner of the current profile
+static list userNameList;
+
+// Function declaration for function not in this file
+BOOL isProtocolLoaded(char* pszProtocolName);
+BOOL isDuplicateEvent(HANDLE hContact, DBEVENTINFO dbei);
+void utf8ToWCHAR(const char *inString, WCHAR *outString, int outStringSize);
+
+typedef struct {
+	// Tag stack used in XML parsing, will not be changed during parsing.
+	stack tagStack;
+	// Handle to the contact, will not be changed during parsing
+	HANDLE hContact;
+	// This is the event type, possible values are:
+	// TAG_MESSAGE, TAG_INV, TAG_INVRESP, TAG_JOIN, TAG_LEAVE
+	// It will be changed during parsing
+	int eventType;
+	// Event info, will be changed during parsing
+	DBEVENTINFO eventInfo;
+
+	// The sender of the event, will be changed during parsing
+	TCHAR fromContact[32];
+	// The receiver of the event, will be changed during parsing
+	TCHAR toContact[32];
+	// Number of fields in eventInfo that is filled, will be changed during parsing
+	int nFieldFilled;
+	// The UTC time offset of the local time, will not be changed during parsing
+	int nUTCOffset;
+	// For message event, it is possible that it is a chat log which involves more than two users.
+	// This is used as a flag to indicate this event is chat log or not.
+	// It will be changed during parsing
+	int numOfContactsInvolved;
+} xmlParseInfo;
+
+int getLocalUTCOffset() {
+	TIME_ZONE_INFORMATION TimeZoneInformation;
+
+	GetTimeZoneInformation(&TimeZoneInformation);
+	return -TimeZoneInformation.Bias * 60;
+}
+
+// Callback function for XML parser to read data from file
+int xmlReadFileStream(BYTE *buf, int cBytes, int *cBytesActual, void *inputData)
+{
+	HANDLE hFile = (HANDLE)inputData;
+	ReadFile(hFile, buf, cBytes, cBytesActual, NULL);
+	return (*cBytesActual < cBytes);
+}
+
+// Callback function for XML parser when start tag is encountered
+int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, const XMLCH *qName, LPXMLVECTOR atts)
+{
+	xmlParseInfo *info = (xmlParseInfo *)UserData;
+
+	if(strcmp(qName, "User") == 0) {
+		switch(info->eventType) {
+			case TAG_MESSAGE:
+				{
+					if(info->numOfContactsInvolved < 2) {
+						int i;
+						TCHAR *userNameBuffer;
+
+						if(stack_Top(&info->tagStack) == TAG_FROM) {
+							userNameBuffer = info->fromContact;
+						}
+						else if(stack_Top(&info->tagStack) == TAG_TO) {
+							userNameBuffer = info->toContact;
+						}
+
+						if(userNameBuffer[0] == '\0') {
+							// Find and parse the user name
+							for(i = 0; i < atts->length; i = i + 1) {
+								LPXMLRUNTIMEATT att;
+
+								att = (LPXMLRUNTIMEATT)XMLVector_Get(atts, i);
+								if(strcmp(att->qname, "FriendlyName") == 0) {
+									#if defined(_UNICODE)
+										utf8ToWCHAR(att->value, userNameBuffer, sizeof(info->fromContact) / sizeof(TCHAR));
+									#else
+										utf8ToAnsi(att->value, userNameBuffer, sizeof(info->fromContact) / sizeof(TCHAR));
+									#endif
+									// Break the for loop
+									break;
+								}
+							}
+						}
+					}
+					info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
+				}
+				break;
+		}
+		stack_Push(&info->tagStack, TAG_USER);
+	}
+	else if(strcmp(qName, "Text") == 0) {
+		stack_Push(&info->tagStack, TAG_TEXT);
+	}
+	else if(strcmp(qName, "From") == 0) {
+		stack_Push(&info->tagStack, TAG_FROM);
+	}
+	else if(strcmp(qName, "To") == 0) {
+		stack_Push(&info->tagStack, TAG_TO);
+	}
+	else if(strcmp(qName, "Message") == 0) {
+		stack_Push(&info->tagStack, TAG_MESSAGE);
+		// A new message event encountered
+		if(atts->length > 0) {
+			int i;
+
+			assert(info->eventType == 0 && info->nFieldFilled == 0 && info->numOfContactsInvolved == 0);
+			// Initialize
+			ZeroMemory(&info->eventInfo, sizeof(DBEVENTINFO));
+			ZeroMemory(info->fromContact, sizeof(info->fromContact));
+			ZeroMemory(info->toContact, sizeof(info->toContact));
+			// Start fill in the info
+			info->eventType = TAG_MESSAGE;
+			// Start fill in the eventInfo
+			info->eventInfo.cbSize = sizeof(DBEVENTINFO);
+			info->nFieldFilled = info->nFieldFilled + 1;
+			info->eventInfo.eventType = EVENTTYPE_MESSAGE;
+			info->nFieldFilled = info->nFieldFilled + 1;
+			info->eventInfo.szModule = MSN_PROTO_NAME;
+			info->nFieldFilled = info->nFieldFilled + 1;
+			// Find and parse the message time, and convert to timestamp
+			for(i = 0; i < atts->length; i = i + 1) {
+				LPXMLRUNTIMEATT att;
+
+				att = (LPXMLRUNTIMEATT)XMLVector_Get(atts, i);
+				if(strcmp(att->qname, "DateTime") == 0) {
+					struct tm time;
+
+					ZeroMemory(&time, sizeof(time));
+					sscanf_s(att->value, "%d-%d-%dT%d:%d:%d", &time.tm_year, &time.tm_mon, &time.tm_mday, &time.tm_hour, &time.tm_min, &time.tm_sec);
+					time.tm_year = time.tm_year - 1900;
+					time.tm_mon = time.tm_mon - 1;
+					info->eventInfo.timestamp = mktime(&time);
+					info->eventInfo.timestamp = info->eventInfo.timestamp + info->nUTCOffset;
+					info->nFieldFilled = info->nFieldFilled + 1;
+					// Break the for loop
+					break;
+				}
+			}
+		}
+	}
+	else if(strcmp(qName, "Invitation") == 0) {
+		stack_Push(&info->tagStack, TAG_INV);
+	}
+	else if(strcmp(qName, "InvitationResponse") == 0) {
+		stack_Push(&info->tagStack, TAG_INVRESP);
+	}
+	else if(strcmp(qName, "File") == 0) {
+		stack_Push(&info->tagStack, TAG_FILE);
+	}
+	else if(strcmp(qName, "Application") == 0) {
+		stack_Push(&info->tagStack, TAG_APP);
+	}
+	else if(strcmp(qName, "Join") == 0) {
+		stack_Push(&info->tagStack, TAG_JOIN);
+	}
+	else if(strcmp(qName, "Leave") == 0) {
+		stack_Push(&info->tagStack, TAG_LEAVE);
+	}
+	else if(strcmp(qName, "Log") == 0) {
+		stack_Push(&info->tagStack, TAG_LOG);
+	}
+	return XML_OK;
+}
+
+// Callback function for XML parser when end tag is encountered
+int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, const XMLCH *qName)
+{
+	xmlParseInfo *info = (xmlParseInfo *)UserData;
+	int popedTag = stack_Pop(&info->tagStack);
+
+	if(strcmp(qName, "User") == 0) {
+		assert(popedTag == TAG_USER);
+	}
+	else if(strcmp(qName, "Text") == 0) {
+		assert(popedTag == TAG_TEXT);
+	}
+	else if(strcmp(qName, "From") == 0) {
+		assert(popedTag == TAG_FROM);
+	}
+	else if(strcmp(qName, "To") == 0) {
+		assert(popedTag == TAG_TO);
+	}
+	else if(strcmp(qName, "Message") == 0) {
+		assert(popedTag == TAG_MESSAGE);
+		// End of the message data
+		assert(info->nFieldFilled == 4 ||info->nFieldFilled == 6);
+		if(info->numOfContactsInvolved == 2) {
+			TCHAR question[192];
+
+			if(info->nFieldFilled == 4) {
+				// TODO: Make sure tag TEXT is parsed
+				// This message is an empty message
+				info->eventInfo.cbBlob = 2;
+				info->nFieldFilled = info->nFieldFilled + 1;
+				info->eventInfo.pBlob = (PBYTE)malloc(info->eventInfo.cbBlob);
+				info->eventInfo.pBlob[0] = ' ';
+				info->eventInfo.pBlob[1] = '\0';
+				info->nFieldFilled = info->nFieldFilled + 1;
+			}
+			// Determine if the message is a sent message or received message
+			if(list_Contains(&userNameList, info->fromContact)) {
+				info->eventInfo.flags = DBEF_SENT | DBEF_UTF;
+				info->nFieldFilled = info->nFieldFilled + 1;
+			}
+			else if(list_Contains(&userNameList, info->toContact)) {
+				info->eventInfo.flags = DBEF_READ | DBEF_UTF;
+				info->nFieldFilled = info->nFieldFilled + 1;
+			}
+			else {
+				int answer;
+
+				ZeroMemory(question, sizeof(question));
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), TranslateT("Please indicate your name:\r\n\r\nYES: "));
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), info->fromContact);
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), TranslateT("\r\nNO: "));
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), info->toContact);
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), TranslateT("\r\n\r\nCancel: Abort the history import"));
+				answer = MessageBox(NULL, question, TranslateT("WLM History Import"), MB_YESNOCANCEL);
+				if(answer == IDCANCEL) {
+					AddMessage(LPGEN("Aborting message import..."));
+					free(info->eventInfo.pBlob);
+					return XML_ABORT;
+				}
+				else {
+					if(answer == IDYES) {
+						info->eventInfo.flags = DBEF_SENT | DBEF_UTF;
+						list_Add(&userNameList, info->fromContact);
+					}
+					else if(answer == IDNO) {
+						info->eventInfo.flags = DBEF_READ | DBEF_UTF;
+						list_Add(&userNameList, info->toContact);
+					}
+					info->nFieldFilled = info->nFieldFilled + 1;
+				}
+			}
+			// Check for duplicate entries
+			assert(info->nFieldFilled == 7);
+			if(isDuplicateEvent(info->hContact, info->eventInfo)) {
+				nDupes = nDupes + 1;
+			}
+			else {
+				if(CallService(MS_DB_EVENT_ADD, (WPARAM)info->hContact, (LPARAM)&(info->eventInfo))) {
+					nImportedMessagesCount = nImportedMessagesCount + 1;
+				}
+				else {
+					nFailed = nFailed + 1;
+				}
+			}
+			free(info->eventInfo.pBlob);
+		}
+		else {
+			// This is a chat log
+			nSkippedChat = nSkippedChat + 1;
+			if(info->nFieldFilled == 6) {
+				free(info->eventInfo.pBlob);
+			}
+		}
+		info->eventType = 0;
+		info->nFieldFilled = 0;
+		info->numOfContactsInvolved = 0;
+	}
+	else if(strcmp(qName, "Invitation") == 0) {
+		assert(popedTag == TAG_INV);
+	}
+	else if(strcmp(qName, "InvitationResponse") == 0) {
+		assert(popedTag == TAG_INVRESP);
+	}
+	else if(strcmp(qName, "File") == 0) {
+		assert(popedTag == TAG_FILE);
+	}
+	else if(strcmp(qName, "Application") == 0) {
+		assert(popedTag == TAG_APP);
+	}
+	else if(strcmp(qName, "Join") == 0) {
+		assert(popedTag == TAG_JOIN);
+	}
+	else if(strcmp(qName, "Leave") == 0) {
+		assert(popedTag == TAG_LEAVE);
+	}
+	else if(strcmp(qName, "Log") == 0) {
+		assert(popedTag == TAG_LOG);
+	}
+	return XML_OK;
+}
+
+// Callback function for XML parser when data between tag is encountered
+int xmlDataCallback(void *UserData, const XMLCH *chars, int cbChars)
+{
+	xmlParseInfo *info = (xmlParseInfo *)UserData;
+
+	if(info->eventType == TAG_MESSAGE) {
+		if(stack_Top(&info->tagStack) == TAG_TEXT) {
+			assert(info->eventInfo.pBlob == NULL);
+			info->eventInfo.cbBlob = cbChars + 1;
+			info->nFieldFilled = info->nFieldFilled + 1;
+			info->eventInfo.pBlob = (PBYTE)malloc(info->eventInfo.cbBlob);
+			CopyMemory(info->eventInfo.pBlob, chars, cbChars);
+			info->eventInfo.pBlob[cbChars] = '\0';
+			info->nFieldFilled = info->nFieldFilled + 1;
+		}
+	}
+	return XML_OK;
+}
+
+
+// This imports history from XML file in WLM format into Miranda IM
+// Return 1 on success, 0 on abort, -1 on failure
+int importXMLHistory(const TCHAR *sXMLPath, const HANDLE hContact) {
+	HANDLE hFile;
+	int result = -1;
+
+	hFile = CreateFile(sXMLPath,
+		GENERIC_READ,                 // open for reading
+		0,                            // do not share
+		NULL,                         // no security
+		OPEN_EXISTING,                // existing file only
+		FILE_ATTRIBUTE_NORMAL,        // normal file
+		NULL);                        // no attr. template
+
+	if (hFile == INVALID_HANDLE_VALUE) {
+		AddMessage(LPGEN("Could not open file..."));
+		result = -1;
+	}
+	else {
+		LPXMLPARSER parser;
+		xmlParseInfo info;
+
+		XMLParser_Create(&parser);
+		parser->startElementHandler = xmlStartTagCallback;
+		parser->endElementHandler = xmlEndTagCallback;
+		parser->charactersHandler = xmlDataCallback;
+		ZeroMemory(&info, sizeof(info));
+		stack_Init(&info.tagStack);
+		info.hContact = hContact;
+		info.nFieldFilled = 0;
+		info.nUTCOffset = getLocalUTCOffset();
+		parser->UserData = (void *)&info;
+		result = XMLParser_Parse(parser, xmlReadFileStream, (void *)hFile, NULL);
+		XMLParser_Free(parser);
+		CloseHandle(hFile);
+	}
+	return result;
+}
+
+// This obtains the string before the '@' character in an email address
+void getAccountNameFromEmail(TCHAR *sID, const size_t idLen, const char *sEmail, const size_t emailLen) {
+	unsigned int count = 0;
+
+	// Count number of character before '@'
+	while(sEmail[count] != '\0' && sEmail[count] != '@' && count < emailLen) {
+		count = count + 1;
+	}
+	// Copy the string before '@' to sID
+#if defined(_UNICODE)
+	mbstowcs_s(NULL, sID, idLen, sEmail, count);
+#else
+	sID[0] = '\0';
+	strncat_s(sID, idLen, sEmail, count);
+#endif
+}
+
+// This returns the email address of a contact
+// Return TRUE when the email is obtained successfully, otherwise FALSE
+int getEmail(char *sEmail, const size_t emailLen, const HANDLE hContact) {
+	DBVARIANT dbv;
+	DBCONTACTGETSETTING sVal;
+
+	dbv.pszVal = sEmail;
+	dbv.cchVal = (WORD)emailLen;
+	dbv.type = DBVT_ASCIIZ;
+	sVal.pValue = &dbv;
+	sVal.szModule = MSN_PROTO_NAME;
+	sVal.szSetting = "e-mail";
+	return (CallService(MS_DB_CONTACT_GETSETTINGSTATIC, (WPARAM)hContact, (LPARAM)&sVal) == 0);
+}
+
+// This returns the number of MSN contact in current profile
+int getNumOfMSNContact() {
+	HANDLE hContact = NULL;
+	int nContactCount = 0;
+
+	hContact = (HANDLE) CallService(MS_DB_CONTACT_FINDFIRST, 0, 0);
+	while (hContact != NULL) {
+		char *szProto = (char *) CallService(MS_PROTO_GETCONTACTBASEPROTO, (WPARAM)hContact, 0);
+		if(szProto != NULL && strcmp(szProto, MSN_PROTO_NAME) == 0) {
+			nContactCount = nContactCount + 1;
+		}
+		hContact = (HANDLE) CallService(MS_DB_CONTACT_FINDNEXT, (WPARAM)hContact, 0);
+	}
+	return nContactCount;
+}
+
+// Main procedure for importing message history
+void wlmImport(HWND hdlgProgressWnd)
+{
+	HANDLE hContact = NULL;
+	unsigned int nNumberOfContacts = 0;
+	unsigned int nImportedContactNum = 0;
+
+	nDupes = 0;
+	nSkippedChat = 0;
+	nFailed = 0;
+	nImportedMessagesCount = 0;
+	list_Reset(&userNameList);
+
+	// Just to keep the macros "SetProgress" happy
+	hdlgProgress = hdlgProgressWnd;
+
+	// Checking before import history
+	if(!isProtocolLoaded(MSN_PROTO_NAME)) {
+		AddMessage(LPGEN("MSN plugin is not installed."));
+		AddMessage(LPGEN("Windows Live Messenger history will be imported."));
+		SET_PROGRESS(100);
+		return;
+	}
+
+	nNumberOfContacts = getNumOfMSNContact();
+	AddMessage(LPGEN("Number of MSN contacts in current profile: %d"), nNumberOfContacts);
+
+	// Start import history for each MSN contacts in current profile
+	hContact = (HANDLE) CallService(MS_DB_CONTACT_FINDFIRST, 0, 0);
+	while (hContact != NULL) {
+		char *szProto = (char *) CallService(MS_PROTO_GETCONTACTBASEPROTO, (WPARAM)hContact, 0);
+		if(szProto != NULL && strcmp(szProto, MSN_PROTO_NAME) == 0) {
+			char sEmail[128];
+
+			if(getEmail(sEmail, sizeof(sEmail), hContact) == TRUE) {
+				// Email address of the MSN contact obtained
+				unsigned int count = 0;
+				TCHAR sID[128];
+				TCHAR sImportXML[MAX_PATH];
+				WIN32_FIND_DATA ffd;
+				HANDLE hFind = INVALID_HANDLE_VALUE;
+
+				getAccountNameFromEmail(sID, 128, sEmail, sizeof(sEmail));
+				// Prepare the XML path to look for
+				_tcscpy_s(sImportXML, MAX_PATH, importFolderPath);
+				_tcscat_s(sImportXML, MAX_PATH, sID);
+				_tcscat_s(sImportXML, MAX_PATH, _T("*.xml"));
+				// Find the first XML file
+				hFind = FindFirstFile(sImportXML, &ffd);
+				if(hFind != INVALID_HANDLE_VALUE) {
+					AddMessage(LPGEN("Importing history for contact: %s"), sEmail);
+					do {
+						// Prepare XML file path
+						_tcscpy(sImportXML, importFolderPath);
+						_tcscat_s(sImportXML, MAX_PATH, ffd.cFileName);
+						// Import XML
+						if(importXMLHistory(sImportXML, hContact) == 0) {
+							// Abort import
+							goto EndImport;
+						}
+					} while(FindNextFile(hFind, &ffd) != 0);
+					FindClose(hFind);
+				}
+			}
+			// Update progress bar
+			nImportedContactNum = nImportedContactNum + 1;
+			SET_PROGRESS(100 * nImportedContactNum / nNumberOfContacts);
+		}
+		hContact = (HANDLE) CallService(MS_DB_CONTACT_FINDNEXT, (WPARAM) hContact, 0);
+	}
+EndImport:
+	AddMessage("");
+	AddMessage(LPGEN("Added %d message events."), nImportedMessagesCount);
+	AddMessage(LPGEN("Skipped %d duplicated message events."), nDupes);
+	AddMessage(LPGEN("Skipped %d chat log message events."), nSkippedChat);
+	AddMessage(LPGEN("%d message events failed to import."), nFailed);
+}
