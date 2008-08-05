@@ -1,6 +1,7 @@
 Windows Live Messenger History Import Plugin
 Imports messages from Windows Live Messenger
 Copyright (C) 2008  Very Crazy Dog (VCD)
+
 Tested on Miranda IM 0.7.7 on Windows XP
 Tested with Windows Live Messenger 8.1 and 8.5 database
 
