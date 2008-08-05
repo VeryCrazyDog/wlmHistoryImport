@@ -120,9 +120,9 @@ STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "Import all messages",IDC_RADIO_ALL,"Button",BS_AUTORADIOBUTTON | BS_LEFT | BS_TOP,7,15,206,11
-    CONTROL         "Custom import",IDC_RADIO_CUSTOM,"Button",BS_AUTORADIOBUTTON | WS_DISABLED,7,64,206,10
+    CONTROL         "Custom import",IDC_RADIO_CUSTOM,"Button",BS_AUTORADIOBUTTON | NOT WS_VISIBLE | WS_DISABLED,7,64,206,10
     LTEXT           "Select this if you want to import as much data as possible. This is the recommended option.",IDC_STATIC_ALL,26,28,187,16
-    LTEXT           "Select this if you want to cutomize what to import.",IDC_STATIC_CUSTOM,26,80,187,16,WS_DISABLED
+    LTEXT           "Select this if you want to cutomize what to import.",IDC_STATIC_CUSTOM,26,80,187,16,NOT WS_VISIBLE | WS_DISABLED
 END
 
 IDD_ADVOPTIONS DIALOGEX 0, 0, 220, 114
@@ -248,8 +248,8 @@ IDI_IMPORT              ICON                    "import.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,0,0
- PRODUCTVERSION 0,1,0,0
+ FILEVERSION 0,1,0,1
+ PRODUCTVERSION 0,1,0,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -266,12 +266,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", " "
             VALUE "FileDescription", "Imports messages from Windows Live Messenger."
-            VALUE "FileVersion", "0.1.0.0"
+            VALUE "FileVersion", "0.1.0.1"
             VALUE "InternalName", "wlmHistoryImport"
-            VALUE "LegalCopyright", "Copyleft 2008, Very Crazy Dog"
+            VALUE "LegalCopyright", "Copyright (C) 2008  Very Crazy Dog"
             VALUE "OriginalFilename", "wlmHistoryImport.dll"
             VALUE "ProductName", "Windows Live Messenger History Import Plugin"
-            VALUE "ProductVersion", "0.1.0.0"
+            VALUE "ProductVersion", "0.1.0.1"
         END
     END
     BLOCK "VarFileInfo"

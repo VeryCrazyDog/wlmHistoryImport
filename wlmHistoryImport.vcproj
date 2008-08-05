@@ -523,11 +523,11 @@
 			Name="Documentation"
 			>
 			<File
-				RelativePath=".\Change Log.txt"
+				RelativePath=".\docs\Change Log.txt"
 				>
 			</File>
 			<File
-				RelativePath=".\Readme.txt"
+				RelativePath=".\docs\Readme.txt"
 				>
 			</File>
 		</Filter>

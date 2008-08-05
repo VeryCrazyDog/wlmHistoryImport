@@ -1,7 +1,50 @@
 /*
+
+    Windows Live Messenger History Import Plugin
+    Imports messages from Windows Live Messenger
+    Copyright (C) 2008  Very Crazy Dog (VCD)
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ */
+ 
+/*===========================================================================
+  Parsifal XML Parser
+  Copyright (c) 2002-2005 Toni Uusitalo
+  released to the public domain 2002-11-15
+  http://www.saunalahti.fi/~samiuus/toni/xmlproc/
+
+  Parsifal is free for both commercial and non-commercial use and
+  redistribution, provided that author's copyright and disclaimer are
+  retained intact.  You are free to modify Parsifal for your own use and
+  to redistribute Parsifal with your modifications, provided that the
+  modifications are clearly documented.
+
+  DISCLAIMER
+  ----------
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  Merchantability or fitness for a particular purpose. Please use it AT
+  YOUR OWN RISK.
+===========================================================================*/
+
+/*
  *
  * FileName: wlmImporter.c
- * Description: This file contains functions for importing Windows Live Messenger history
+ * Description: This file contains functions for importing Windows Live 
+ * Messenger history. This file used Parsifal XML Parser for parsing XML files.
  *
  */
 
@@ -45,6 +88,15 @@
 // Path of the file that is sent / received
 #define TAG_FILE		12
 
+// Function Marco
+#define SET_PROGRESS(n)  SendMessage(hdlgProgress,PROGM_SETPROGRESS,n,0)
+
+// Function declaration for function not in this file
+void AddMessage( const char* fmt, ... );
+BOOL isProtocolLoaded(char* pszProtocolName);
+BOOL isDuplicateEvent(HANDLE hContact, DBEVENTINFO dbei);
+void utf8ToWCHAR(const char *inString, WCHAR *outString, int outStringSize);
+
 // Number of duplicated message during the import
 DWORD nDupes;
 // Number of skipped message during import
@@ -56,11 +108,7 @@ DWORD nImportedMessagesCount;
 // A list of user name that is belong to the owner of the current profile
 static list userNameList;
 
-// Function declaration for function not in this file
-BOOL isProtocolLoaded(char* pszProtocolName);
-BOOL isDuplicateEvent(HANDLE hContact, DBEVENTINFO dbei);
-void utf8ToWCHAR(const char *inString, WCHAR *outString, int outStringSize);
-
+// This structure is used for variable passing when parsing XML files
 typedef struct {
 	// Tag stack used in XML parsing, will not be changed during parsing.
 	stack tagStack;
@@ -87,6 +135,8 @@ typedef struct {
 	int numOfContactsInvolved;
 } xmlParseInfo;
 
+// This returns the local UTC time offset in seconds
+// Return: Offset between UTC+0 and local time in seconds
 int getLocalUTCOffset() {
 	TIME_ZONE_INFORMATION TimeZoneInformation;
 
@@ -94,7 +144,8 @@ int getLocalUTCOffset() {
 	return -TimeZoneInformation.Bias * 60;
 }
 
-// Callback function for XML parser to read data from file
+// Callback function for XML parser to read data from file, see documentation
+// from Parsifal XML Parser for more information
 int xmlReadFileStream(BYTE *buf, int cBytes, int *cBytesActual, void *inputData)
 {
 	HANDLE hFile = (HANDLE)inputData;
@@ -102,7 +153,8 @@ int xmlReadFileStream(BYTE *buf, int cBytes, int *cBytesActual, void *inputData)
 	return (*cBytesActual < cBytes);
 }
 
-// Callback function for XML parser when start tag is encountered
+// Callback function for XML parser when start tag is encountered, see 
+// documentation from Parsifal XML Parser for more information
 int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, const XMLCH *qName, LPXMLVECTOR atts)
 {
 	xmlParseInfo *info = (xmlParseInfo *)UserData;
@@ -220,7 +272,8 @@ int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName
 	return XML_OK;
 }
 
-// Callback function for XML parser when end tag is encountered
+// Callback function for XML parser when end tag is encountered, see
+// documentation from Parsifal XML Parser for more information
 int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, const XMLCH *qName)
 {
 	xmlParseInfo *info = (xmlParseInfo *)UserData;
@@ -341,7 +394,8 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 	return XML_OK;
 }
 
-// Callback function for XML parser when data between tag is encountered
+// Callback function for XML parser when data between tag is encountered, see
+// documentation from Parsifal XML Parser for more information
 int xmlDataCallback(void *UserData, const XMLCH *chars, int cbChars)
 {
 	xmlParseInfo *info = (xmlParseInfo *)UserData;
@@ -360,9 +414,10 @@ int xmlDataCallback(void *UserData, const XMLCH *chars, int cbChars)
 	return XML_OK;
 }
 
-
 // This imports history from XML file in WLM format into Miranda IM
-// Return 1 on success, 0 on abort, -1 on failure
+// Param: [in]sXMLPath - Path of the XML file to import
+//        [in]hContact - Handle to the contact that associate with the XML file
+// Return: 1 on success, 0 on abort, -1 on failure
 int importXMLHistory(const TCHAR *sXMLPath, const HANDLE hContact) {
 	HANDLE hFile;
 	int result = -1;
@@ -401,6 +456,11 @@ int importXMLHistory(const TCHAR *sXMLPath, const HANDLE hContact) {
 }
 
 // This obtains the string before the '@' character in an email address
+// Param: [out]sID - Buffer for putting a string before the '@' character of
+//                   sEmail
+//        [in]idLen - Length of the variable sID
+//        [in]sEmail - Email address to proccess
+//        [in]emailLen - Length of the variable sEmail
 void getAccountNameFromEmail(TCHAR *sID, const size_t idLen, const char *sEmail, const size_t emailLen) {
 	unsigned int count = 0;
 
@@ -409,16 +469,19 @@ void getAccountNameFromEmail(TCHAR *sID, const size_t idLen, const char *sEmail,
 		count = count + 1;
 	}
 	// Copy the string before '@' to sID
-#if defined(_UNICODE)
-	mbstowcs_s(NULL, sID, idLen, sEmail, count);
-#else
-	sID[0] = '\0';
-	strncat_s(sID, idLen, sEmail, count);
-#endif
+	#if defined(_UNICODE)
+		mbstowcs_s(NULL, sID, idLen, sEmail, count);
+	#else
+		sID[0] = '\0';
+		strncat_s(sID, idLen, sEmail, count);
+	#endif
 }
 
 // This returns the email address of a contact
-// Return TRUE when the email is obtained successfully, otherwise FALSE
+// Param: [out]sEmail - Email address of the queried contact
+//        [in]emailLen - Length of the variable sEmail
+//        [in]hContact - Handle to the queried contact
+// Return: TRUE when the email is obtained successfully, otherwise FALSE
 int getEmail(char *sEmail, const size_t emailLen, const HANDLE hContact) {
 	DBVARIANT dbv;
 	DBCONTACTGETSETTING sVal;
@@ -433,6 +496,7 @@ int getEmail(char *sEmail, const size_t emailLen, const HANDLE hContact) {
 }
 
 // This returns the number of MSN contact in current profile
+// Return: Number of MSN contact in current profile
 int getNumOfMSNContact() {
 	HANDLE hContact = NULL;
 	int nContactCount = 0;
@@ -506,7 +570,7 @@ void wlmImport(HWND hdlgProgressWnd)
 						// Import XML
 						if(importXMLHistory(sImportXML, hContact) == 0) {
 							// Abort import
-							goto EndImport;
+							goto END_IMPORT;
 						}
 					} while(FindNextFile(hFind, &ffd) != 0);
 					FindClose(hFind);
@@ -518,7 +582,7 @@ void wlmImport(HWND hdlgProgressWnd)
 		}
 		hContact = (HANDLE) CallService(MS_DB_CONTACT_FINDNEXT, (WPARAM) hContact, 0);
 	}
-EndImport:
+END_IMPORT:
 	AddMessage("");
 	AddMessage(LPGEN("Added %d message events."), nImportedMessagesCount);
 	AddMessage(LPGEN("Skipped %d duplicated message events."), nDupes);
