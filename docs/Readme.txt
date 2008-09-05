@@ -37,6 +37,6 @@ Current Limitation
 Installation
 ============
 1. Copy wlmHistoryImport.dll to Miranda IM plugin folder
-2. Copy parsifal.dll to the same folder as miranda32.exe
+2. Copy parsifal.dll to the folder where miranda32.exe is located (Miranda IM root folder)
 3. Backup your current profile
 4. Run Miranda IM and use the plugin :)
