@@ -248,8 +248,8 @@ IDI_IMPORT              ICON                    "import.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,0,1
- PRODUCTVERSION 0,1,0,1
+ FILEVERSION 0,1,0,2
+ PRODUCTVERSION 0,1,0,2
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -266,12 +266,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", " "
             VALUE "FileDescription", "Imports messages from Windows Live Messenger."
-            VALUE "FileVersion", "0.1.0.1"
+            VALUE "FileVersion", "0.1.0.2"
             VALUE "InternalName", "wlmHistoryImport"
             VALUE "LegalCopyright", "Copyright (C) 2008  Very Crazy Dog"
             VALUE "OriginalFilename", "wlmHistoryImport.dll"
             VALUE "ProductName", "Windows Live Messenger History Import Plugin"
-            VALUE "ProductVersion", "0.1.0.1"
+            VALUE "ProductVersion", "0.1.0.2"
         END
     END
     BLOCK "VarFileInfo"

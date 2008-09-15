@@ -9,6 +9,10 @@ This plugin is released under GPL.
 
 
 
+Version 0.1.0.2 (2008-09-15):
+* Microsoft .NET Framework or Microsoft Visual C++ Redistributable Package is no longer required in running this plugin
+* Fixed some compilation warning
+
 Version 0.1.0.1 (2008-08-05):
 * Changed the license and copyright information
 * Minor changes to the source code

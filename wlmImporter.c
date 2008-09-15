@@ -52,6 +52,7 @@
 #include "resource.h"
 
 #include <time.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include "libparsifal/parsifal.h"
@@ -95,6 +96,7 @@
 void AddMessage( const char* fmt, ... );
 BOOL isProtocolLoaded(char* pszProtocolName);
 BOOL isDuplicateEvent(HANDLE hContact, DBEVENTINFO dbei);
+void utf8ToAnsi(const char *szIn, char *szOut, int cchOut);
 void utf8ToWCHAR(const char *inString, WCHAR *outString, int outStringSize);
 
 // Number of duplicated message during the import
