@@ -105,6 +105,8 @@ DWORD nDupes;
 DWORD nSkippedChat;
 // Number of failed import message during import
 DWORD nFailed;
+// Number of filtered message during import
+DWORD nFiltered;
 // Number of message imported
 DWORD nImportedMessagesCount;
 // A list of user name that is belong to the owner of the current profile
@@ -297,7 +299,21 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 		assert(popedTag == TAG_MESSAGE);
 		// End of the message data
 		assert(info->nFieldFilled == 4 ||info->nFieldFilled == 6);
-		if(info->numOfContactsInvolved == 2) {
+		if(!(nImportOptions & IOPT_MSG)) {
+			// User do not want to import message event
+			nFiltered = nFiltered + 1;
+			if(info->nFieldFilled == 6) {
+				free(info->eventInfo.pBlob);
+			}
+		}
+		else if(dwSinceDate != 0 && (info->eventInfo.timestamp < dwSinceDate)) {
+			// The event date is older than the specified date
+			nFiltered = nFiltered + 1;
+			if(info->nFieldFilled == 6) {
+				free(info->eventInfo.pBlob);
+			}
+		}
+		else if(info->numOfContactsInvolved == 2) {
 			TCHAR question[192];
 
 			if(info->nFieldFilled == 4) {
@@ -524,6 +540,7 @@ void wlmImport(HWND hdlgProgressWnd)
 	nDupes = 0;
 	nSkippedChat = 0;
 	nFailed = 0;
+	nFiltered = 0;
 	nImportedMessagesCount = 0;
 	list_Reset(&userNameList);
 
@@ -588,6 +605,7 @@ END_IMPORT:
 	AddMessage("");
 	AddMessage(LPGEN("Added %d message events."), nImportedMessagesCount);
 	AddMessage(LPGEN("Skipped %d duplicated message events."), nDupes);
+	AddMessage(LPGEN("Skipped %d filtered message events."), nFiltered);
 	AddMessage(LPGEN("Skipped %d chat log message events."), nSkippedChat);
 	AddMessage(LPGEN("%d message events failed to import."), nFailed);
 }
