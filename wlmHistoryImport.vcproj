@@ -523,7 +523,7 @@
 			Name="Documentation"
 			>
 			<File
-				RelativePath=".\docs\Change Log.txt"
+				RelativePath=".\docs\Changelog.txt"
 				>
 			</File>
 			<File

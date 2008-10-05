@@ -8,6 +8,11 @@ Tested with Windows Live Messenger 8.1 and 8.5 database
 This plugin is released under GPL.
 
 
+Version 0.1.1.2 (2008-10-05):
++ Able to import messages only later than a specified date
+* Fixed one memory leak
+* Updated the Homepage link
+* Minor changes to the source code and comment
 
 Version 0.1.0.2 (2008-09-15):
 * Microsoft .NET Framework or Microsoft Visual C++ Redistributable Package is no longer required in running this plugin

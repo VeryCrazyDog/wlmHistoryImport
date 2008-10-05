@@ -28,7 +28,7 @@ Current Limitation
   unable to handle message event if the name of sender and the name of receiver
   are the same.
 
-- Not able to import chat log (message to multiple receiver).
+- Not able to import chat log (message to multiple receivers).
 
 - Not able to handle corrupted database.
 
