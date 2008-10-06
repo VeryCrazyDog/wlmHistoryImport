@@ -89,6 +89,15 @@
 // Path of the file that is sent / received
 #define TAG_FILE		12
 
+// Information that is to be filled in in DBEVENTINFO
+#define INFO_CBSIZE     1
+#define INFO_MODULE     2
+#define INFO_TIME       4
+#define INFO_FLAGS      8
+#define INFO_TYPE       16
+#define INFO_CBBLOB     32
+#define INFO_PBLOB      64
+
 // Function Marco
 #define SET_PROGRESS(n)  SendMessage(hdlgProgress,PROGM_SETPROGRESS,n,0)
 
@@ -114,7 +123,7 @@ static list userNameList;
 
 // This structure is used for variable passing when parsing XML files
 typedef struct {
-	// Tag stack used in XML parsing, will not be changed during parsing.
+	// Tag stack used in XML parsing, only stack content will be changed during parsing.
 	stack tagStack;
 	// Handle to the contact, will not be changed during parsing
 	HANDLE hContact;
@@ -129,8 +138,8 @@ typedef struct {
 	TCHAR fromContact[32];
 	// The receiver of the event, will be changed during parsing
 	TCHAR toContact[32];
-	// Number of fields in eventInfo that is filled, will be changed during parsing
-	int nFieldFilled;
+	// Fields in eventInfo that is filled, will be changed during parsing
+	int nFieldsFilled;
 	// The UTC time offset of the local time, will not be changed during parsing
 	int nUTCOffset;
 	// For message event, it is possible that it is a chat log which involves more than two users.
@@ -167,36 +176,53 @@ int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName
 		switch(info->eventType) {
 			case TAG_MESSAGE:
 				{
-					if(info->numOfContactsInvolved < 2) {
-						int i;
-						TCHAR *userNameBuffer;
+					int i;
+					TCHAR xmlContact[32];
 
+					xmlContact[0] = '\0';
+					// Get the new contact name
+					for(i = 0; i < atts->length; i = i + 1) {
+						LPXMLRUNTIMEATT att;
+
+						att = (LPXMLRUNTIMEATT)XMLVector_Get(atts, i);
+						if(strcmp(att->qname, "FriendlyName") == 0) {
+							#if defined(_UNICODE)
+								utf8ToWCHAR(att->value, xmlContact, sizeof(xmlContact) / sizeof(TCHAR));
+							#else
+								utf8ToAnsi(att->value, xmlContact, sizeof(xmlContact) / sizeof(TCHAR));
+							#endif
+							// Break the for loop
+							break;
+						}
+					}
+					if(info->numOfContactsInvolved == 0) {
+						// Add the new contact name
 						if(stack_Top(&info->tagStack) == TAG_FROM) {
-							userNameBuffer = info->fromContact;
+							_tcsncpy_s(info->fromContact, sizeof(info->fromContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+							info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 						}
 						else if(stack_Top(&info->tagStack) == TAG_TO) {
-							userNameBuffer = info->toContact;
+							_tcsncpy_s(info->toContact, sizeof(info->toContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+							info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 						}
-
-						if(userNameBuffer[0] == '\0') {
-							// Find and parse the user name
-							for(i = 0; i < atts->length; i = i + 1) {
-								LPXMLRUNTIMEATT att;
-
-								att = (LPXMLRUNTIMEATT)XMLVector_Get(atts, i);
-								if(strcmp(att->qname, "FriendlyName") == 0) {
-									#if defined(_UNICODE)
-										utf8ToWCHAR(att->value, userNameBuffer, sizeof(info->fromContact) / sizeof(TCHAR));
-									#else
-										utf8ToAnsi(att->value, userNameBuffer, sizeof(info->fromContact) / sizeof(TCHAR));
-									#endif
-									// Break the for loop
-									break;
+					}
+					else {
+						// If the new contact name is not duplicate of the existing "From Contact" and "To Contact", and the field is not filled, add it
+						if(_tcscmp(xmlContact, info->fromContact) != 0 && _tcscmp(xmlContact, info->toContact) != 0) {
+							if(stack_Top(&info->tagStack) == TAG_FROM) {
+								if((info->fromContact)[0] == '\0') {
+									_tcsncpy_s(info->fromContact, sizeof(info->fromContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
 								}
+								info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
+							}
+							else if(stack_Top(&info->tagStack) == TAG_TO) {
+								if((info->toContact)[0] == '\0') {
+									_tcsncpy_s(info->toContact, sizeof(info->toContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+								}
+								info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 							}
 						}
 					}
-					info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 				}
 				break;
 		}
@@ -217,7 +243,7 @@ int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName
 		if(atts->length > 0) {
 			int i;
 
-			assert(info->eventType == 0 && info->nFieldFilled == 0 && info->numOfContactsInvolved == 0);
+			assert(info->eventType == 0 && info->nFieldsFilled == 0 && info->numOfContactsInvolved == 0);
 			// Initialize
 			ZeroMemory(&info->eventInfo, sizeof(DBEVENTINFO));
 			ZeroMemory(info->fromContact, sizeof(info->fromContact));
@@ -226,11 +252,11 @@ int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName
 			info->eventType = TAG_MESSAGE;
 			// Start fill in the eventInfo
 			info->eventInfo.cbSize = sizeof(DBEVENTINFO);
-			info->nFieldFilled = info->nFieldFilled + 1;
+			info->nFieldsFilled = info->nFieldsFilled | INFO_CBSIZE;
 			info->eventInfo.eventType = EVENTTYPE_MESSAGE;
-			info->nFieldFilled = info->nFieldFilled + 1;
+			info->nFieldsFilled = info->nFieldsFilled | INFO_TYPE;
 			info->eventInfo.szModule = MSN_PROTO_NAME;
-			info->nFieldFilled = info->nFieldFilled + 1;
+			info->nFieldsFilled = info->nFieldsFilled | INFO_MODULE;
 			// Find and parse the message time, and convert to timestamp
 			for(i = 0; i < atts->length; i = i + 1) {
 				LPXMLRUNTIMEATT att;
@@ -245,7 +271,7 @@ int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName
 					time.tm_mon = time.tm_mon - 1;
 					info->eventInfo.timestamp = mktime(&time);
 					info->eventInfo.timestamp = info->eventInfo.timestamp + info->nUTCOffset;
-					info->nFieldFilled = info->nFieldFilled + 1;
+					info->nFieldsFilled = info->nFieldsFilled | INFO_TIME;
 					// Break the for loop
 					break;
 				}
@@ -298,42 +324,34 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 	else if(strcmp(qName, "Message") == 0) {
 		assert(popedTag == TAG_MESSAGE);
 		// End of the message data
-		assert(info->nFieldFilled == 4 ||info->nFieldFilled == 6);
 		if(!(nImportOptions & IOPT_MSG)) {
 			// User do not want to import message event
 			nFiltered = nFiltered + 1;
-			if(info->nFieldFilled == 6) {
-				free(info->eventInfo.pBlob);
-			}
 		}
 		else if(dwSinceDate != 0 && (info->eventInfo.timestamp < dwSinceDate)) {
 			// The event date is older than the specified date
 			nFiltered = nFiltered + 1;
-			if(info->nFieldFilled == 6) {
-				free(info->eventInfo.pBlob);
-			}
 		}
 		else if(info->numOfContactsInvolved == 2) {
 			TCHAR question[192];
 
-			if(info->nFieldFilled == 4) {
-				// TODO: Make sure tag TEXT is parsed
+			if(!(info->nFieldsFilled & INFO_PBLOB)) {
 				// This message is an empty message
 				info->eventInfo.cbBlob = 2;
-				info->nFieldFilled = info->nFieldFilled + 1;
+				info->nFieldsFilled = info->nFieldsFilled | INFO_CBBLOB;
 				info->eventInfo.pBlob = (PBYTE)malloc(info->eventInfo.cbBlob);
 				info->eventInfo.pBlob[0] = ' ';
 				info->eventInfo.pBlob[1] = '\0';
-				info->nFieldFilled = info->nFieldFilled + 1;
+				info->nFieldsFilled = info->nFieldsFilled | INFO_PBLOB;
 			}
 			// Determine if the message is a sent message or received message
 			if(list_Contains(&userNameList, info->fromContact)) {
 				info->eventInfo.flags = DBEF_SENT | DBEF_UTF;
-				info->nFieldFilled = info->nFieldFilled + 1;
+				info->nFieldsFilled = info->nFieldsFilled | INFO_FLAGS;
 			}
 			else if(list_Contains(&userNameList, info->toContact)) {
 				info->eventInfo.flags = DBEF_READ | DBEF_UTF;
-				info->nFieldFilled = info->nFieldFilled + 1;
+				info->nFieldsFilled = info->nFieldsFilled | INFO_FLAGS;
 			}
 			else {
 				int answer;
@@ -354,38 +372,44 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 					if(answer == IDYES) {
 						info->eventInfo.flags = DBEF_SENT | DBEF_UTF;
 						list_Add(&userNameList, info->fromContact);
+						info->nFieldsFilled = info->nFieldsFilled | INFO_FLAGS;
 					}
 					else if(answer == IDNO) {
 						info->eventInfo.flags = DBEF_READ | DBEF_UTF;
 						list_Add(&userNameList, info->toContact);
+						info->nFieldsFilled = info->nFieldsFilled | INFO_FLAGS;
 					}
-					info->nFieldFilled = info->nFieldFilled + 1;
 				}
 			}
-			// Check for duplicate entries
-			assert(info->nFieldFilled == 7);
-			if(isDuplicateEvent(info->hContact, info->eventInfo)) {
-				nDupes = nDupes + 1;
-			}
-			else {
-				if(CallService(MS_DB_EVENT_ADD, (WPARAM)info->hContact, (LPARAM)&(info->eventInfo))) {
-					nImportedMessagesCount = nImportedMessagesCount + 1;
+			
+			if(info->nFieldsFilled == (INFO_CBSIZE | INFO_MODULE | INFO_TIME | INFO_FLAGS | INFO_TYPE | INFO_CBBLOB | INFO_PBLOB)) {
+				// Check for duplicate entries
+				if(isDuplicateEvent(info->hContact, info->eventInfo)) {
+					nDupes = nDupes + 1;
 				}
 				else {
-					nFailed = nFailed + 1;
+					if(CallService(MS_DB_EVENT_ADD, (WPARAM)info->hContact, (LPARAM)&(info->eventInfo))) {
+						nImportedMessagesCount = nImportedMessagesCount + 1;
+					}
+					else {
+						nFailed = nFailed + 1;
+					}
 				}
 			}
-			free(info->eventInfo.pBlob);
+			else {
+				// Some fields missing
+				nFailed = nFailed + 1;
+			}
 		}
 		else {
 			// This is a chat log
 			nSkippedChat = nSkippedChat + 1;
-			if(info->nFieldFilled == 6) {
-				free(info->eventInfo.pBlob);
-			}
+		}
+		if(info->nFieldsFilled & INFO_PBLOB) {
+			free(info->eventInfo.pBlob);
 		}
 		info->eventType = 0;
-		info->nFieldFilled = 0;
+		info->nFieldsFilled = 0;
 		info->numOfContactsInvolved = 0;
 	}
 	else if(strcmp(qName, "Invitation") == 0) {
@@ -422,11 +446,11 @@ int xmlDataCallback(void *UserData, const XMLCH *chars, int cbChars)
 		if(stack_Top(&info->tagStack) == TAG_TEXT) {
 			assert(info->eventInfo.pBlob == NULL);
 			info->eventInfo.cbBlob = cbChars + 1;
-			info->nFieldFilled = info->nFieldFilled + 1;
+			info->nFieldsFilled = info->nFieldsFilled | INFO_CBBLOB;
 			info->eventInfo.pBlob = (PBYTE)malloc(info->eventInfo.cbBlob);
 			CopyMemory(info->eventInfo.pBlob, chars, cbChars);
 			info->eventInfo.pBlob[cbChars] = '\0';
-			info->nFieldFilled = info->nFieldFilled + 1;
+			info->nFieldsFilled = info->nFieldsFilled | INFO_PBLOB;
 		}
 	}
 	return XML_OK;
@@ -463,7 +487,7 @@ int importXMLHistory(const TCHAR *sXMLPath, const HANDLE hContact) {
 		ZeroMemory(&info, sizeof(info));
 		stack_Init(&info.tagStack);
 		info.hContact = hContact;
-		info.nFieldFilled = 0;
+		info.nFieldsFilled = 0;
 		info.nUTCOffset = getLocalUTCOffset();
 		parser->UserData = (void *)&info;
 		result = XMLParser_Parse(parser, xmlReadFileStream, (void *)hFile, NULL);
@@ -603,9 +627,9 @@ void wlmImport(HWND hdlgProgressWnd)
 	}
 END_IMPORT:
 	AddMessage("");
-	AddMessage(LPGEN("Added %d message events."), nImportedMessagesCount);
-	AddMessage(LPGEN("Skipped %d duplicated message events."), nDupes);
-	AddMessage(LPGEN("Skipped %d filtered message events."), nFiltered);
-	AddMessage(LPGEN("Skipped %d chat log message events."), nSkippedChat);
+	AddMessage(LPGEN("%d message events added."), nImportedMessagesCount);
+	AddMessage(LPGEN("%d duplicated message events skipped."), nDupes);
+	AddMessage(LPGEN("%d filtered message events skipped."), nFiltered);
+	AddMessage(LPGEN("%d chat log message events skipped."), nSkippedChat);
 	AddMessage(LPGEN("%d message events failed to import."), nFailed);
 }
