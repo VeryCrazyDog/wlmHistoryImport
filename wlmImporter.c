@@ -314,6 +314,17 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 	}
 	else if(strcmp(qName, "Text") == 0) {
 		assert(popedTag == TAG_TEXT);
+		if(stack_Top(&info->tagStack) == TAG_MESSAGE) {
+			if(!(info->nFieldsFilled & INFO_PBLOB) && !(info->nFieldsFilled & INFO_CBBLOB)) {
+				// This message is an empty message
+				info->eventInfo.cbBlob = 2;
+				info->nFieldsFilled = info->nFieldsFilled | INFO_CBBLOB;
+				info->eventInfo.pBlob = (PBYTE)malloc(info->eventInfo.cbBlob);
+				info->eventInfo.pBlob[0] = ' ';
+				info->eventInfo.pBlob[1] = '\0';
+				info->nFieldsFilled = info->nFieldsFilled | INFO_PBLOB;
+			}
+		}
 	}
 	else if(strcmp(qName, "From") == 0) {
 		assert(popedTag == TAG_FROM);
@@ -335,15 +346,6 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 		else if(info->numOfContactsInvolved == 2) {
 			TCHAR question[192];
 
-			if(!(info->nFieldsFilled & INFO_PBLOB)) {
-				// This message is an empty message
-				info->eventInfo.cbBlob = 2;
-				info->nFieldsFilled = info->nFieldsFilled | INFO_CBBLOB;
-				info->eventInfo.pBlob = (PBYTE)malloc(info->eventInfo.cbBlob);
-				info->eventInfo.pBlob[0] = ' ';
-				info->eventInfo.pBlob[1] = '\0';
-				info->nFieldsFilled = info->nFieldsFilled | INFO_PBLOB;
-			}
 			// Determine if the message is a sent message or received message
 			if(list_Contains(&userNameList, info->fromContact)) {
 				info->eventInfo.flags = DBEF_SENT | DBEF_UTF;
