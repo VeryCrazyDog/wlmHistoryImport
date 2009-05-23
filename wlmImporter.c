@@ -198,26 +198,27 @@ int xmlStartTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName
 					if(info->numOfContactsInvolved == 0) {
 						// Add the new contact name
 						if(stack_Top(&info->tagStack) == TAG_FROM) {
-							_tcsncpy_s(info->fromContact, sizeof(info->fromContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+							_tcsncpy_s(info->fromContact, sizeof(info->fromContact) / sizeof(TCHAR), xmlContact, _TRUNCATE);
 							info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 						}
 						else if(stack_Top(&info->tagStack) == TAG_TO) {
-							_tcsncpy_s(info->toContact, sizeof(info->toContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+							_tcsncpy_s(info->toContact, sizeof(info->toContact) / sizeof(TCHAR), xmlContact, _TRUNCATE);
 							info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 						}
 					}
 					else {
 						// If the new contact name is not duplicate of the existing "From Contact" and "To Contact", and the field is not filled, add it
+						// Number of contacts involved is increased by 1 even the fill is filled, because the message maybe a chat log
 						if(_tcscmp(xmlContact, info->fromContact) != 0 && _tcscmp(xmlContact, info->toContact) != 0) {
 							if(stack_Top(&info->tagStack) == TAG_FROM) {
 								if((info->fromContact)[0] == '\0') {
-									_tcsncpy_s(info->fromContact, sizeof(info->fromContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+									_tcsncpy_s(info->fromContact, sizeof(info->fromContact) / sizeof(TCHAR), xmlContact, _TRUNCATE);
 								}
 								info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 							}
 							else if(stack_Top(&info->tagStack) == TAG_TO) {
 								if((info->toContact)[0] == '\0') {
-									_tcsncpy_s(info->toContact, sizeof(info->toContact) / sizeof(TCHAR), xmlContact, sizeof(xmlContact) / sizeof(TCHAR) - 1);
+									_tcsncpy_s(info->toContact, sizeof(info->toContact) / sizeof(TCHAR), xmlContact, _TRUNCATE);
 								}
 								info->numOfContactsInvolved = info->numOfContactsInvolved + 1;
 							}
@@ -359,11 +360,11 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 				int answer;
 
 				ZeroMemory(question, sizeof(question));
-				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), TranslateT("Please indicate your name:\r\n\r\nYES: "));
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), _T("Please indicate your name:\r\n\r\nYES: "));
 				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), info->fromContact);
-				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), TranslateT("\r\nNO: "));
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), _T("\r\nNO: "));
 				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), info->toContact);
-				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), TranslateT("\r\n\r\nCancel: Abort the history import"));
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), _T("\r\n\r\nCancel: Abort the history import"));
 				answer = MessageBox(NULL, question, TranslateT("WLM History Import"), MB_YESNOCANCEL);
 				if(answer == IDCANCEL) {
 					AddMessage(LPGEN("Aborting message import..."));
@@ -599,7 +600,7 @@ void wlmImport(HWND hdlgProgressWnd)
 				WIN32_FIND_DATA ffd;
 				HANDLE hFind = INVALID_HANDLE_VALUE;
 
-				getAccountNameFromEmail(sID, 128, sEmail, sizeof(sEmail));
+				getAccountNameFromEmail(sID, sizeof(sID) / sizeof(TCHAR), sEmail, sizeof(sEmail));
 				// Prepare the XML path to look for
 				_tcscpy_s(sImportXML, MAX_PATH, importFolderPath);
 				_tcscat_s(sImportXML, MAX_PATH, sID);

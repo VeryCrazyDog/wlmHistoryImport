@@ -75,7 +75,7 @@ BOOL list_Contains(list *list, const TCHAR *data) {
 	// No data for i = 0
 	for(i = 1; list->data[i] <= *list->le ; i = i + 1) {
 		if(_tcscmp(list->data[i], data) == 0) {
-			result = 1;
+			result = TRUE;
 			break;
 		}
 	}

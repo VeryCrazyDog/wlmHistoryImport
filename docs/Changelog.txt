@@ -2,11 +2,18 @@ Windows Live Messenger History Import Plugin
 Imports messages from Windows Live Messenger
 Copyright (C) 2008  Very Crazy Dog (VCD)
 
-Tested on Miranda IM 0.7.7 on Windows XP
-Tested with Windows Live Messenger 8.1 and 8.5 database
+Tested on Miranda IM 0.7.17 on Windows XP
+Tested with Windows Live Messenger 8.1 and 8.5 message history
 
 This plugin is released under GPL.
 
+
+
+Version 0.1.1.3 (2009-05-23):
+* Reviewed and changed some of the source code to prevent the crash related to 
+  "User FriendlyName" tag in XML file after user "kofv" reported crash on using
+  the plugin with MSN 7.0 XML files with long "User FriendlyName". The crash is
+  unable to reproduce. :(
 
 Version 0.1.1.2 (2008-10-05):
 + Able to import messages only later than a specified date
