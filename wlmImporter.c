@@ -345,8 +345,6 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 			nFiltered = nFiltered + 1;
 		}
 		else if(info->numOfContactsInvolved == 2) {
-			TCHAR question[192];
-
 			// Determine if the message is a sent message or received message
 			if(list_Contains(&userNameList, info->fromContact)) {
 				info->eventInfo.flags = DBEF_SENT | DBEF_UTF;
@@ -357,14 +355,22 @@ int xmlEndTagCallback(void *UserData, const XMLCH *uri, const XMLCH *localName, 
 				info->nFieldsFilled = info->nFieldsFilled | INFO_FLAGS;
 			}
 			else {
+				TCHAR translated[192];
+				TCHAR question[512];
 				int answer;
 
+				ZeroMemory(translated, sizeof(translated));
 				ZeroMemory(question, sizeof(question));
-				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), _T("Please indicate your name:\r\n\r\nYES: "));
+				_tcsncpy_s(translated, 192, TranslateT("Please indicate your name:\r\n"), _TRUNCATE);
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), translated);
+				_tcsncpy_s(translated, 32, TranslateT("\r\nYES: "), _TRUNCATE);
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), translated);
 				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), info->fromContact);
-				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), _T("\r\nNO: "));
+				_tcsncpy_s(translated, 32, TranslateT("\r\nNO: "), _TRUNCATE);
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), translated);
 				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), info->toContact);
-				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), _T("\r\n\r\nCancel: Abort the history import"));
+				_tcsncpy_s(translated, 192, TranslateT("\r\n\r\nCancel: Abort the history import"), _TRUNCATE);
+				_tcscat_s(question, sizeof(question) / sizeof(TCHAR), translated);
 				answer = MessageBox(NULL, question, TranslateT("WLM History Import"), MB_YESNOCANCEL);
 				if(answer == IDCANCEL) {
 					AddMessage(LPGEN("Aborting message import..."));
