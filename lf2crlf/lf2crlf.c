@@ -29,7 +29,7 @@ PLUGININFOEX pluginInfo={
 	sizeof(PLUGININFOEX),
 	"LF to CRLF",
 	PLUGIN_MAKE_VERSION(0,8,0,0),
-	"This plugin converts line ending in the content of message events from line feed to carage return and line feed.",
+	"This plugin converts line ending in all MSN history events from line feed to carage return and line feed.",
 	"Very Crazy Dog (VCD)",
 	"Very_Crazy_Dog@yahoo.com.hk",
 	"Copyright (C) 2009  Very Crazy Dog",
@@ -45,71 +45,36 @@ static unsigned int doConvert() {
 
 	convertedEvent = 0;
 	hContact = (HANDLE)CallService(MS_DB_CONTACT_FINDFIRST, 0, 0);
+	// TODO: Check if the contact is MSN contact or not
 	while (hContact != NULL) {
 		DBEVENTINFO dbei;
 		HANDLE hDbEvent;
-		int oldBlobSize;
-		int newBlobSize;
+		int currentBlobSize;
+		int neededBlobSize;
 
-		ZeroMemory(&dbei,sizeof(dbei));
-		dbei.cbSize=sizeof(dbei);
-		dbei.pBlob=NULL;
-		hDbEvent=(HANDLE)CallService(MS_DB_EVENT_FINDFIRST,(WPARAM)hContact,0);
-		oldBlobSize=0;
-		while ( hDbEvent != NULL ) {
+		ZeroMemory(&dbei, sizeof(dbei));
+		dbei.cbSize = sizeof(dbei);
+		dbei.pBlob = NULL;
+		hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDFIRST, (WPARAM)hContact, 0);
+		currentBlobSize = 0;
+		while (hDbEvent != NULL) {
 			int msgLen;
 
-			msgLen=CallService(MS_DB_EVENT_GETBLOBSIZE,(WPARAM)hDbEvent,0);
-			newBlobSize = msgLen;
-			if(newBlobSize>oldBlobSize) {
-				dbei.pBlob=(PBYTE)mir_realloc(dbei.pBlob,newBlobSize);
-				oldBlobSize=newBlobSize;
+			// Check if the current size of the blob is large enough or not
+			msgLen = CallService(MS_DB_EVENT_GETBLOBSIZE,(WPARAM)hDbEvent,0);
+			neededBlobSize = msgLen;
+			if(neededBlobSize > currentBlobSize) {
+				dbei.pBlob = (PBYTE)mir_realloc(dbei.pBlob, neededBlobSize);
+				currentBlobSize = neededBlobSize;
 			}
-			dbei.cbBlob = oldBlobSize;
-			CallService( MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei );
-			//{
-			//	int i;
-			//	unsigned int crCount;
-			//	unsigned int lfCount;
-			//	
-			//	crCount = 0;
-			//	lfCount = 0;
-			//	for(i = 0; i < dbei.cbBlob; i++) {
-			//		if(dbei.pBlob[i] == '\r') {
-			//			crCount++;
-			//		}
-			//		else if(dbei.pBlob[i] == '\n') {
-			//			lfCount++;
-			//		}
-			//	}
-			//	if(crCount < lfCount) {
-			//		if(newBlobSize + lfCount > oldBlobSize) {
-			//			dbei.pBlob=(PBYTE)mir_realloc(dbei.pBlob,newBlobSize + lfCount);
-			//			oldBlobSize=newBlobSize + lfCount;
-			//		}
-			//		dbei.cbBlob = oldBlobSize;
-			//		ZeroMemory(dbei.pBlob, dbei.cbBlob);
-			//		CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei );
-			//		
-			//		for(i = oldBlobSize - 1; i > 0 && lfCount > 0; i--) {
-			//			dbei.pBlob[i] = dbei.pBlob[i - lfCount];
-			//			if(dbei.pBlob[i] == '\n') {
-			//				dbei.pBlob[i - 1] = '\r';
-			//				lfCount--;
-			//				i--;
-			//			}
-			//		}
-			//		CallService(MS_DB_EVENT_DELETE, (WPARAM)hContact, (LPARAM)hDbEvent);
-			//		CallService(MS_DB_EVENT_ADD, (WPARAM)hContact, (LPARAM)&dbei);
-			//		convertedEvent++;
-			//		hDbEvent=(HANDLE)CallService(MS_DB_EVENT_FINDFIRST,(WPARAM)hContact,0);
-			//	}
-			//}
-
+			dbei.cbBlob = currentBlobSize;
+			// Get the message event
+			CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei);
 			{
 				int i;
 				unsigned int lfCount;
-				
+			
+				// Count the number of LF
 				lfCount = 0;
 				for(i = 0; i < dbei.cbBlob; i++) {
 					if(dbei.pBlob[i] == '\n') {
@@ -123,17 +88,21 @@ static unsigned int doConvert() {
 						}
 					}
 				}
+				// Prepare to replace LF by CRLF if there is any LF in the event
 				if(lfCount > 0) {
-					if(newBlobSize + lfCount > oldBlobSize) {
-						dbei.pBlob=(PBYTE)mir_realloc(dbei.pBlob,newBlobSize + lfCount);
-						oldBlobSize=newBlobSize + lfCount;
+					// Calculate and obtain the new size needed
+					neededBlobSize = msgLen + lfCount;
+					if(neededBlobSize > currentBlobSize) {
+						dbei.pBlob = (PBYTE)mir_realloc(dbei.pBlob, neededBlobSize);
+						currentBlobSize = neededBlobSize;
+						// Get the message again since the memory has been reallocated
+						//ZeroMemory(dbei.pBlob, dbei.cbBlob);
+						CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei);
 					}
-					dbei.cbBlob = oldBlobSize;
-					ZeroMemory(dbei.pBlob, dbei.cbBlob);
-					CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei );
-					dbei.cbBlob = msgLen + lfCount;
+					// Prepare the new size of the message to save
+					dbei.cbBlob = neededBlobSize;
 					// Replace LF with CRLF
-					for(i = oldBlobSize - 1; i > 0 && lfCount > 0; i--) {
+					for(i = currentBlobSize - 1; i > 0 && lfCount > 0; i--) {
 						dbei.pBlob[i] = dbei.pBlob[i - lfCount];
 						if(dbei.pBlob[i] == '\n') {
 							if(i - lfCount - 1 < 0 || dbei.pBlob[i - lfCount - 1] != '\r') {
@@ -161,19 +130,23 @@ static unsigned int doConvert() {
 					//	}
 					//}
 					//// Trim one CRLF if any
-					//if(oldBlobSize > 3) {
-					//	if(dbei.pBlob[oldBlobSize - 2] == '\n' && dbei.pBlob[oldBlobSize - 2 - 1] == '\r') {
-					//		dbei.pBlob[oldBlobSize - 2 - 1] = '\0';
+					//if(currentBlobSize > 3) {
+					//	if(dbei.pBlob[currentBlobSize - 2] == '\n' && dbei.pBlob[currentBlobSize - 2 - 1] == '\r') {
+					//		dbei.pBlob[currentBlobSize - 2 - 1] = '\0';
 					//		dbei.cbBlob = dbei.cbBlob - 2;
 					//	}
 					//}
+					// Delete the old message
 					CallService(MS_DB_EVENT_DELETE, (WPARAM)hContact, (LPARAM)hDbEvent);
+					// Add the converted one
 					CallService(MS_DB_EVENT_ADD, (WPARAM)hContact, (LPARAM)&dbei);
+					// Add the counter
 					convertedEvent++;
-					hDbEvent=(HANDLE)CallService(MS_DB_EVENT_FINDFIRST,(WPARAM)hContact,0);
+					
+					hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDFIRST, (WPARAM)hContact, 0);
 				}
 			}
-			hDbEvent=(HANDLE)CallService(MS_DB_EVENT_FINDNEXT,(WPARAM)hDbEvent,0);
+			hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDNEXT, (WPARAM)hDbEvent, 0);
 		}
 		mir_free(dbei.pBlob);
 		hContact = (HANDLE)CallService(MS_DB_CONTACT_FINDNEXT, (WPARAM)hContact, 0);
