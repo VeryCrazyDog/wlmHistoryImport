@@ -145,30 +145,6 @@ static unsigned int doConvert() {
 					dbei.cbBlob = neededBlobSize;
 					// Replace LF with CRLF
 					replaceLFbyCRLF(dbei.pBlob, msgLen, lfCount);
-					//// Trim CRLF at the end
-					//i = dbei.cbBlob - 2;
-					//while(i > 0) {
-					//	if(dbei.pBlob[i] == '\n' && dbei.pBlob[i - 1] == '\r') {
-					//		dbei.pBlob[i - 1] = '\0';
-					//		dbei.cbBlob = dbei.cbBlob - 2;
-					//		i = i - 2;
-					//	}
-					//	else if(dbei.pBlob[i] == ' ') {
-					//		dbei.pBlob[i] = '\0';
-					//		dbei.cbBlob = dbei.cbBlob - 1;
-					//		i = i - 1;
-					//	}
-					//	else {
-					//		i = 0;
-					//	}
-					//}
-					//// Trim one CRLF if any
-					//if(currentBlobSize > 3) {
-					//	if(dbei.pBlob[currentBlobSize - 2] == '\n' && dbei.pBlob[currentBlobSize - 2 - 1] == '\r') {
-					//		dbei.pBlob[currentBlobSize - 2 - 1] = '\0';
-					//		dbei.cbBlob = dbei.cbBlob - 2;
-					//	}
-					//}
 					{
 						HANDLE hEventToDelete = hDbEvent;
 
@@ -201,13 +177,13 @@ static int PluginMenuCommand(WPARAM wParam, LPARAM lParam)
 {
 	int answer;
 
-	answer = MessageBox(NULL, "Are you sure you want to convert LF to CRLF in all MSN history event?", "LF to CRLF", MB_YESNOCANCEL | MB_ICONQUESTION);
+	answer = MessageBox(NULL, TranslateT("Are you sure you want to convert LF to CRLF in all MSN history event?\r\nThis will take a few minutes..."), "LF to CRLF", MB_YESNOCANCEL | MB_ICONQUESTION);
 	if(answer == IDYES) {
 		unsigned int convertedEvent;
 		char command[ 1024 ];
 
 		convertedEvent = doConvert();
-		mir_snprintf( command, sizeof( command ), "Converted %d message event.", convertedEvent );
+		mir_snprintf( command, sizeof( command ), TranslateT("Converted %d message event."), convertedEvent );
 		MessageBox(NULL, command, "LF to CRLF", MB_OK | MB_ICONINFORMATION);
 	}
 	return 0;
@@ -237,16 +213,16 @@ int __declspec(dllexport) Load(PLUGINLINK *link)
 {
 	CLISTMENUITEM mi;
 
-	pluginLink=link;
+	pluginLink = link;
 	mir_getMMI(&mmi);
 	CreateServiceFunction(LF2CRLF_SERVICE,PluginMenuCommand);
 	ZeroMemory(&mi,sizeof(mi));
-	mi.cbSize=sizeof(mi);
-	mi.position=-0x7FFFFFFF;
-	mi.flags=0;
-	mi.hIcon=LoadSkinnedIcon(SKINICON_OTHER_HISTORY);
-	mi.pszName=LPGEN("&LF to CRLF...");
-	mi.pszService=LF2CRLF_SERVICE;
+	mi.cbSize = sizeof(mi);
+	mi.position = -0x7FFFFFFF;
+	mi.flags = 0;
+	mi.hIcon = LoadSkinnedIcon(SKINICON_OTHER_HISTORY);
+	mi.pszName = LPGEN("&LF to CRLF...");
+	mi.pszService = LF2CRLF_SERVICE;
 	CallService(MS_CLIST_ADDMAINMENUITEM,0,(LPARAM)&mi);
 	return 0;
 }
