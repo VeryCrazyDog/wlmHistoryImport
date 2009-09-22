@@ -1,11 +1,23 @@
 /*
-Miranda plugin template, originally by Richard Hughes
-http://miranda-icq.sourceforge.net/
 
-This file is placed in the public domain. Anybody is free to use or
-modify it as they wish with no restriction.
-There is no warranty.
-*/
+    LF to CRLF
+    Converts line ending in all MSN history events from line feed to carage return and line feed.
+    Copyright (C) 2009 - 2009  Very Crazy Dog (VCD)
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ */
 
 #include <windows.h>
 #include <newpluginapi.h>
@@ -17,7 +29,7 @@ There is no warranty.
 #include <m_database.h>
 #include <m_system.h>
 
-// {8BBC5C4A-1131-4488-8120-4144422AEB7E}
+// GUID = {8BBC5C4A-1131-4488-8120-4144422AEB7E}
 #define MIID_LF2CRLF { 0x8bbc5c4a, 0x1131, 0x4488, { 0x81, 0x20, 0x41, 0x44, 0x42, 0x2a, 0xeb, 0x7e } }
 #define LF2CRLF_SERVICE "LF2CRLF/Convert"
 
@@ -39,6 +51,41 @@ PLUGININFOEX pluginInfo={
 	MIID_LF2CRLF
 };
 
+static unsigned int countLF(PBYTE buf, DWORD bufSize) {
+	unsigned int result = 0;
+	DWORD i;
+
+	for(i = 0; i < bufSize; i++) {
+		if(buf[i] == '\n') {
+			if(i - 1 >= 0) {
+				if(buf[i - 1] != '\r') {
+					result++;
+				}
+			}
+			else {
+				result++;
+			}
+		}
+	}
+	return result;
+}
+
+static void replaceLFbyCRLF(PBYTE buf, DWORD strLen, unsigned int lfCount) {
+	int i;
+
+	strLen = strLen + lfCount;
+	for(i = strLen - 1; i > 0 && lfCount > 0; i--) {
+		buf[i] = buf[i - lfCount];
+		if(buf[i] == '\n') {
+			if(i - lfCount - 1 < 0 || buf[i - lfCount - 1] != '\r') {
+				buf[i - 1] = '\r';
+				lfCount--;
+				i--;
+			}
+		}
+	}
+}
+
 static unsigned int doConvert() {
 	HANDLE hContact = NULL;
 	unsigned int convertedEvent;
@@ -50,7 +97,6 @@ static unsigned int doConvert() {
 		DBEVENTINFO dbei;
 		HANDLE hDbEvent;
 		int currentBlobSize;
-		int neededBlobSize;
 
 		ZeroMemory(&dbei, sizeof(dbei));
 		dbei.cbSize = sizeof(dbei);
@@ -59,6 +105,9 @@ static unsigned int doConvert() {
 		currentBlobSize = 0;
 		while (hDbEvent != NULL) {
 			int msgLen;
+			int neededBlobSize;
+			unsigned int lfCount;
+			BOOL doneReplace = FALSE;
 
 			// Check if the current size of the blob is large enough or not
 			msgLen = CallService(MS_DB_EVENT_GETBLOBSIZE,(WPARAM)hDbEvent,0);
@@ -70,85 +119,68 @@ static unsigned int doConvert() {
 			dbei.cbBlob = currentBlobSize;
 			// Get the message event
 			CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei);
-			{
-				int i;
-				unsigned int lfCount;
-			
-				// Count the number of LF
-				lfCount = 0;
-				for(i = 0; i < dbei.cbBlob; i++) {
-					if(dbei.pBlob[i] == '\n') {
-						if(i - 1 >= 0) {
-							if(dbei.pBlob[i - 1] != '\r') {
-								lfCount++;
-							}
-						}
-						else {
-							lfCount++;
-						}
-					}
+			// Count the number of LF
+			lfCount = countLF(dbei.pBlob, dbei.cbBlob);
+			// Prepare to replace LF by CRLF if there is any LF in the event
+			if(lfCount > 0) {
+				// Calculate and obtain the new size needed
+				neededBlobSize = msgLen + lfCount;
+				if(neededBlobSize > currentBlobSize) {
+					dbei.pBlob = (PBYTE)mir_realloc(dbei.pBlob, neededBlobSize);
+					currentBlobSize = neededBlobSize;
+					// Get the message again since the memory has been reallocated
+					CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei);
 				}
-				// Prepare to replace LF by CRLF if there is any LF in the event
-				if(lfCount > 0) {
-					// Calculate and obtain the new size needed
-					neededBlobSize = msgLen + lfCount;
-					if(neededBlobSize > currentBlobSize) {
-						dbei.pBlob = (PBYTE)mir_realloc(dbei.pBlob, neededBlobSize);
-						currentBlobSize = neededBlobSize;
-						// Get the message again since the memory has been reallocated
-						//ZeroMemory(dbei.pBlob, dbei.cbBlob);
-						CallService(MS_DB_EVENT_GET, (WPARAM)hDbEvent, (LPARAM)&dbei);
-					}
-					// Prepare the new size of the message to save
-					dbei.cbBlob = neededBlobSize;
-					// Replace LF with CRLF
-					for(i = currentBlobSize - 1; i > 0 && lfCount > 0; i--) {
-						dbei.pBlob[i] = dbei.pBlob[i - lfCount];
-						if(dbei.pBlob[i] == '\n') {
-							if(i - lfCount - 1 < 0 || dbei.pBlob[i - lfCount - 1] != '\r') {
-								dbei.pBlob[i - 1] = '\r';
-								lfCount--;
-								i--;
-							}
-						}
-					}
-					//// Trim CRLF at the end
-					//i = dbei.cbBlob - 2;
-					//while(i > 0) {
-					//	if(dbei.pBlob[i] == '\n' && dbei.pBlob[i - 1] == '\r') {
-					//		dbei.pBlob[i - 1] = '\0';
-					//		dbei.cbBlob = dbei.cbBlob - 2;
-					//		i = i - 2;
-					//	}
-					//	else if(dbei.pBlob[i] == ' ') {
-					//		dbei.pBlob[i] = '\0';
-					//		dbei.cbBlob = dbei.cbBlob - 1;
-					//		i = i - 1;
-					//	}
-					//	else {
-					//		i = 0;
-					//	}
-					//}
-					//// Trim one CRLF if any
-					//if(currentBlobSize > 3) {
-					//	if(dbei.pBlob[currentBlobSize - 2] == '\n' && dbei.pBlob[currentBlobSize - 2 - 1] == '\r') {
-					//		dbei.pBlob[currentBlobSize - 2 - 1] = '\0';
-					//		dbei.cbBlob = dbei.cbBlob - 2;
-					//	}
-					//}
+				// Prepare the size of the converted message
+				dbei.cbBlob = neededBlobSize;
+				// Replace LF with CRLF
+				replaceLFbyCRLF(dbei.pBlob, msgLen, lfCount);
+				//// Trim CRLF at the end
+				//i = dbei.cbBlob - 2;
+				//while(i > 0) {
+				//	if(dbei.pBlob[i] == '\n' && dbei.pBlob[i - 1] == '\r') {
+				//		dbei.pBlob[i - 1] = '\0';
+				//		dbei.cbBlob = dbei.cbBlob - 2;
+				//		i = i - 2;
+				//	}
+				//	else if(dbei.pBlob[i] == ' ') {
+				//		dbei.pBlob[i] = '\0';
+				//		dbei.cbBlob = dbei.cbBlob - 1;
+				//		i = i - 1;
+				//	}
+				//	else {
+				//		i = 0;
+				//	}
+				//}
+				//// Trim one CRLF if any
+				//if(currentBlobSize > 3) {
+				//	if(dbei.pBlob[currentBlobSize - 2] == '\n' && dbei.pBlob[currentBlobSize - 2 - 1] == '\r') {
+				//		dbei.pBlob[currentBlobSize - 2 - 1] = '\0';
+				//		dbei.cbBlob = dbei.cbBlob - 2;
+				//	}
+				//}
+				{
+					HANDLE hEventToDelete = hDbEvent;
+
+					// Find the next message first
+					hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDNEXT, (WPARAM)hDbEvent, 0);
 					// Delete the old message
-					CallService(MS_DB_EVENT_DELETE, (WPARAM)hContact, (LPARAM)hDbEvent);
+					CallService(MS_DB_EVENT_DELETE, (WPARAM)hContact, (LPARAM)hEventToDelete);
 					// Add the converted one
 					CallService(MS_DB_EVENT_ADD, (WPARAM)hContact, (LPARAM)&dbei);
 					// Add the counter
 					convertedEvent++;
-					
-					hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDFIRST, (WPARAM)hContact, 0);
+					// Set the flag
+					doneReplace = TRUE;
 				}
 			}
-			hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDNEXT, (WPARAM)hDbEvent, 0);
+			if(doneReplace == FALSE) {
+				hDbEvent = (HANDLE)CallService(MS_DB_EVENT_FINDNEXT, (WPARAM)hDbEvent, 0);
+			}
 		}
-		mir_free(dbei.pBlob);
+		if(dbei.pBlob != NULL) {
+			mir_free(dbei.pBlob);
+		}
 		hContact = (HANDLE)CallService(MS_DB_CONTACT_FINDNEXT, (WPARAM)hContact, 0);
 	}
 	return convertedEvent;
