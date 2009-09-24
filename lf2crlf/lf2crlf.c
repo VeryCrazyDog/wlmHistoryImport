@@ -1,7 +1,8 @@
 /*
 
     LF to CRLF
-    Converts line ending in all MSN history events from line feed to carage return and line feed.
+    Converts line ending in all MSN history events from line feed to carriage 
+    return and line feed.
     Copyright (C) 2009 - 2009  Very Crazy Dog (VCD)
 
     This program is free software: you can redistribute it and/or modify

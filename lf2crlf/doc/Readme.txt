@@ -1,5 +1,5 @@
 LF to CRLF
-Converts line ending in all MSN history events from line feed to carage return 
+Converts line ending in all MSN history events from line feed to carriage return
 and line feed.
 Copyright (C) 2009 - 2009  Very Crazy Dog (VCD)
 
@@ -12,7 +12,7 @@ This plugin is released under GPL.
 Notice
 ============
 This plugin is intended to correct the incorrect line ending character from line
-feed (LF) to carage return and line feed (CRLF), which is caused importing WLM 
+feed (LF) to carriage return and line feed (CRLF), which is caused importing WLM
 message history using Windows Live Messenger History Import Plugin 
 (wlmHistoryImport.dll) version 0.1.2.0 and below.
 
