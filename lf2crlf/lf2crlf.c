@@ -46,7 +46,7 @@ PLUGININFOEX pluginInfo={
 	"This plugin converts line ending in all MSN history events from line feed to carage return and line feed.",
 	"Very Crazy Dog (VCD)",
 	"Very_Crazy_Dog@yahoo.com.hk",
-	"Copyright (C) 2009  Very Crazy Dog",
+	"Copyright (C) 2009 - 2009  Very Crazy Dog",
 	"http://forums.miranda-im.org/showthread.php?t=19337",
 	UNICODE_AWARE,
 	0,
