@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8.00"
+	Version="9.00"
 	Name="wlmHistoryImport"
 	ProjectGUID="{A2E809DC-5D96-48EE-BB3F-1D46BB97169C}"
-	RootNamespace="import"
+	RootNamespace="wlmHistoryImport"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -43,7 +44,7 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName=".\Release/import.tlb"
+				TypeLibraryName=".\Release/wlmHistoryImport.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -54,7 +55,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;IMPORT_EXPORTS;_USE_32BIT_TIME_T"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WLMHISTORYIMPORT_EXPORTS;_USE_32BIT_TIME_T"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -93,6 +94,8 @@
 				EnableCOMDATFolding="2"
 				LinkTimeCodeGeneration="1"
 				BaseAddress="0x22000000"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				ImportLibrary="$(IntDir)/$(TargetName).lib"
 				TargetMachine="1"
 			/>
@@ -113,9 +116,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -149,14 +149,14 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName=".\Debug/import.tlb"
+				TypeLibraryName=".\Debug/wlmHistoryImport.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;IMPORT_EXPORTS;_USE_32BIT_TIME_T"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WLMHISTORYIMPORT_EXPORTS;_USE_32BIT_TIME_T"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -189,6 +189,8 @@
 				GenerateMapFile="false"
 				MapFileName=""
 				BaseAddress="0x22000000"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				ImportLibrary="$(IntDir)/$(TargetName).lib"
 				TargetMachine="1"
 			/>
@@ -209,9 +211,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -245,16 +244,16 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName=".\Debug/import.tlb"
+				TypeLibraryName=".\Debug/wlmHistoryImport.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;IMPORT_EXPORTS;_USE_32BIT_TIME_T"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WLMHISTORYIMPORT_EXPORTS;_USE_32BIT_TIME_T"
 				StringPooling="false"
-				ExceptionHandling="0"
+				ExceptionHandling="1"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="true"
@@ -288,6 +287,8 @@
 				GenerateMapFile="false"
 				MapFileName=""
 				BaseAddress="0x22000000"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				ImportLibrary="$(IntDir)/$(TargetName).lib"
 				TargetMachine="1"
 			/>
@@ -308,9 +309,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -345,7 +343,7 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName=".\Release/import.tlb"
+				TypeLibraryName=".\Release/wlmHistoryImport.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -356,7 +354,7 @@
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;IMPORT_EXPORTS;_USE_32BIT_TIME_T"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WLMHISTORYIMPORT_EXPORTS;_USE_32BIT_TIME_T"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -396,6 +394,8 @@
 				EnableCOMDATFolding="2"
 				LinkTimeCodeGeneration="1"
 				BaseAddress="0x22000000"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				ImportLibrary="$(IntDir)/$(TargetName).lib"
 				TargetMachine="1"
 			/>
@@ -418,9 +418,6 @@
 				Name="VCAppVerifierTool"
 			/>
 			<Tool
-				Name="VCWebDeploymentTool"
-			/>
-			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -433,15 +430,11 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath=".\commonFunction.c"
+				RelativePath=".\commonFunction.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\wizard.c"
-				>
-			</File>
-			<File
-				RelativePath=".\wlmHistoryImport.c"
+				RelativePath=".\wlmHistoryImport.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -477,28 +470,28 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\wlmImporter.c"
+				RelativePath=".\wlmImporter.cpp"
 				>
 			</File>
+			<Filter
+				Name="GUI"
+				>
+				<File
+					RelativePath=".\wizard.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath=".\libparsifal\parsifal.h"
-				>
-			</File>
-			<File
 				RelativePath=".\resource.h"
 				>
 			</File>
 			<File
-				RelativePath=".\tagStack.h"
-				>
-			</File>
-			<File
-				RelativePath=".\userNameList.h"
+				RelativePath=".\StringList.h"
 				>
 			</File>
 			<File
@@ -528,6 +521,26 @@
 			</File>
 			<File
 				RelativePath=".\docs\Readme.txt"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="XMLParser"
+			>
+			<File
+				RelativePath=".\XMLParser\wlm_xml.h"
+				>
+			</File>
+			<File
+				RelativePath=".\XMLParser\xmlApi.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\XMLParser\xmlParser.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\XMLParser\xmlParser.h"
 				>
 			</File>
 		</Filter>

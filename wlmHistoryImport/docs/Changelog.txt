@@ -1,11 +1,27 @@
 Windows Live Messenger History Import Plugin
-Imports messages from Windows Live Messenger
-Copyright (C) 2008  Very Crazy Dog (VCD)
+Imports message history from Windows Live Messenger
+Copyright (C) 2008 - 2009  Very Crazy Dog (VCD)
 
-Tested on Miranda IM 0.7.17 on Windows XP
+Tested on Miranda IM 0.8.1 on Windows XP
 Tested with Windows Live Messenger 8.1 and 8.5 message history
 
 This plugin is released under GPL.
+
+
+Version 0.8.0.0 (2009-09-24):
++ Added support for Miranda IM 0.8.x. Version number is jumped from 0.1.2.0 to 
+  0.8.0.0 to represnet support of Miranda IM 0.8.x.
+- Removed support for Miranda IM 0.7.x and below.
+* Switched to the XML parser that is used in Miranda IM.
+* The line ending of imported messages are now using CRLF instead of LF.
+* Empty messages (messages with only space, tab, new line, etc) are now able to
+  import correctly instead of converted to just a space character.
+* Fixed incorrect import problems when long user name (usually > 32 chars) is 
+  recorded in WLM history XML files.
++ Added checking to prevent incorrect importing due to the sender name is the 
+  same as the receiver name of a message event.
++ One single XML file that is larger than 16MB will not allowed to be imported.
+
 
 
 Version 0.1.2.0 (2009-05-31):

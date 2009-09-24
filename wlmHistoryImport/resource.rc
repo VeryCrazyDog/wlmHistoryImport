@@ -52,36 +52,23 @@ END
 // Dialog
 //
 
-IDD_IMPORTTYPE DIALOGEX 0, 0, 220, 114
-STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
-FONT 8, "MS Shell Dlg", 0, 0, 0x1
-BEGIN
-    LTEXT           "Choose how you would like to import:",IDC_STATIC,5,16,210,8
-    CONTROL         "From Windows Live Messager database.",IDC_WLM,"Button",BS_AUTORADIOBUTTON,11,31,204,10
-    LTEXT           "Your MSN plugin is not loaded...",IDC_MSNNOTLOADED,11,88,103,8,NOT WS_VISIBLE
-END
-
 IDD_INTRO DIALOGEX 0, 0, 220, 114
 STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "This wizard will help you import message history from Windows Live Messenger.",IDC_STATIC,33,13,182,18
-    ICON            IDI_IMPORT,IDC_STATIC,5,12,20,20
+    ICON            IDI_WLMIMPORT,IDC_STATIC,5,12,20,20
     LTEXT           "Please notice that only history of existing contacts in Miranda IM will be imported.",IDC_STATIC,33,33,182,18
-    LTEXT           "It is recommended that you create a backup of your current Miranda profile before importing.",IDC_STATIC,33,87,182,21
-    LTEXT           "Click ""Next"" to choose the information you wish to import, or click ""Cancel"" to exit the wizard and continue using Miranda.",IDC_STATIC,33,56,182,25
+    LTEXT           "It is recommended that you create a backup of your current Miranda IM profile before importing.",IDC_STATIC,33,87,182,21
+    LTEXT           "Click ""Next"" to choose the information you wish to import, or click ""Cancel"" to exit the wizard and continue using Miranda IM.",IDC_STATIC,33,56,182,25
 END
 
 IDD_FINISHED DIALOGEX 0, 0, 220, 114
 STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    LTEXT           "If you wish to import more information, click ""Next"" to return to the start of the wizard, otherwise click ""Finish"" to start using Miranda.",IDC_STATIC,5,20,210,16,NOT WS_VISIBLE
-    LTEXT           "You will probably never need to use this wizard again, so you can save memory by not loading it every time you start Miranda. This will mean that the import menu item will no longer be available.",IDC_STATIC,5,41,210,24,NOT WS_VISIBLE
-    CONTROL         "Do not load the import plugin at startup again",IDC_DONTLOADPLUGIN,
-                    "Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,6,97,210,10
-    LTEXT           "Import completed!",IDC_STATIC,5,7,210,8
-    LTEXT           "If at a future date you wish to use the wizard again, you can make it load again by going to the Plugins section of the Options dialog box.",IDC_STATIC,5,69,210,24,NOT WS_VISIBLE
+    LTEXT           "If you wish to import more information, click ""Next"" to return to the start of the wizard, otherwise click ""Finish"" to continue using Miranda IM.",IDC_STATIC,5,44,210,25
+    LTEXT           "Import completed!",IDC_STATIC,5,14,210,8
 END
 
 IDD_WLMDB DIALOGEX 0, 0, 220, 114
@@ -89,10 +76,10 @@ STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "Please specify the directory that store the Windows Live Messager history. This is usually at\r\n\r\n%USERPROFILE%\\My Documents\\My Received Files\\",IDC_STATIC,5,5,210,33
-    PUSHBUTTON      "&Browser...",IDC_BROWSER,149,63,66,14
+    PUSHBUTTON      "&Browse...",IDC_BROWSER,149,63,66,14
     LTEXT           "&Filename:",IDC_STATIC,5,49,32,8
     EDITTEXT        IDC_FOLDERNAME,38,47,177,12,ES_AUTOHSCROLL
-    CTEXT           "Warning:\r\nPlease make sure Windows Live Messenger is not running!",IDC_MIRABILISRUNNING,5,90,210,19
+    CTEXT           "Warning:\r\nPlease make sure Windows Live Messenger is not running!",IDC_STATIC,5,90,210,19
 END
 
 IDD_PROGRESS DIALOGEX 0, 0, 220, 114
@@ -100,13 +87,13 @@ STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "Now importing...",IDC_IMPORTING,5,11,62,8
-    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER | 0x1,5,24,210,10
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",PBS_SMOOTH | WS_BORDER,5,24,210,10
     LISTBOX         IDC_STATUS,5,38,210,61,NOT LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL | LBS_NOSEL | WS_VSCROLL | WS_TABSTOP
 END
 
 IDD_WIZARD DIALOGEX 0, 0, 220, 143
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_CAPTION | WS_SYSMENU
-CAPTION "WLM History Import Wizard"
+CAPTION "WLM History Importer Wizard"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "&Next >",IDOK,120,124,45,13
@@ -119,37 +106,40 @@ IDD_OPTIONS DIALOGEX 0, 0, 220, 114
 STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    CONTROL         "Import all messages",IDC_RADIO_ALL,"Button",BS_AUTORADIOBUTTON | BS_LEFT | BS_TOP,7,15,206,11
+    CONTROL         "Import all",IDC_RADIO_ALL,"Button",BS_AUTORADIOBUTTON | BS_LEFT | BS_TOP,7,15,206,11
     CONTROL         "Custom import",IDC_RADIO_CUSTOM,"Button",BS_AUTORADIOBUTTON,7,64,206,10
-    LTEXT           "Select this if you want to import as much data as possible. This is the recommended option.",IDC_STATIC_ALL,26,28,187,16
-    LTEXT           "Select this if you want to cutomize what to import.",IDC_STATIC_CUSTOM,26,80,187,16
+    LTEXT           "Select this if you want to import as much data as possible.",IDC_STATIC,26,28,187,16
+    LTEXT           "Select this if you want to customize what to import.",IDC_STATIC,26,80,187,16
 END
 
 IDD_ADVOPTIONS DIALOGEX 0, 0, 220, 114
 STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    CONTROL         "New contacts && groups",IDC_CONTACTS,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,10,16,100,10
-    CONTROL         "System history",IDC_SYSTEM,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,120,16,98,10
-    LTEXT           "Select items to import:",IDC_ALL,10,3,201,10,SS_NOTIFY
-    CONTROL         "",IDC_IN_MSG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,40,44,10,10
-    CONTROL         "",IDC_IN_URL,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,40,56,10,10
-    CONTROL         "",IDC_IN_FT,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,40,68,10,10
-    CONTROL         "",IDC_IN_OTHER,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,40,80,10,10
-    CONTROL         "Only since:",IDC_SINCE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,99,100,10
-    CONTROL         "",IDC_DATETIMEPICKER,"SysDateTimePick32",DTS_RIGHTALIGN | WS_DISABLED | WS_TABSTOP,120,97,81,15
-    CTEXT           "Messages",IDC_STATIC,54,44,112,8,SS_NOTIFY
-    CTEXT           "URLs",IDC_STATIC,54,56,112,8,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
-    CTEXT           "File Transfers",IDC_STATIC,54,68,112,8,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
-    CTEXT           "Other",IDC_STATIC,54,80,112,8,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
-    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,0,93,222,1
-    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,0,31,223,1
-    CTEXT           "Incoming",IDC_INCOMING,2,34,86,10,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
-    CONTROL         "",IDC_OUT_OTHER,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,170,80,10,10
-    CONTROL         "",IDC_OUT_FT,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,170,68,10,10
-    CONTROL         "",IDC_OUT_URL,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,170,56,10,10
-    CONTROL         "",IDC_OUT_MSG,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,170,44,10,10
-    CTEXT           "Outgoing",IDC_OUTGOING,132,34,86,10,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
+    LTEXT           "Select items to import:",IDC_STATIC,10,3,201,10,SS_NOTIFY
+    CONTROL         "",IDC_IN_MSG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,40,29,10,10
+    CONTROL         "",IDC_IN_FILE,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,40,48,10,10
+    CONTROL         "",IDC_IN_OTHER,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,40,67,10,10
+    CONTROL         "Only since:",IDC_SINCE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,93,100,10
+    CONTROL         "",IDC_DATETIMEPICKER,"SysDateTimePick32",DTS_RIGHTALIGN | WS_DISABLED | WS_TABSTOP,110,91,81,15
+    CTEXT           "Messages",IDC_MSG,54,29,112,8,SS_NOTIFY
+    CTEXT           "File Transfers",IDC_STATIC,54,48,112,8,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,0,84,222,1
+    CTEXT           "Incoming",IDC_STATIC,2,16,86,10,SS_NOTIFY
+    CONTROL         "",IDC_OUT_OTHER,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,170,67,10,10
+    CONTROL         "",IDC_OUT_FILE,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,170,48,10,10
+    CONTROL         "",IDC_OUT_MSG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,170,29,10,10
+    CTEXT           "Outgoing",IDC_STATIC,132,16,86,10,SS_NOTIFY
+    CTEXT           "Other",IDC_STATIC,54,67,112,8,SS_NOTIFY | NOT WS_VISIBLE | WS_DISABLED
+END
+
+IDD_IMPORTACC DIALOGEX 0, 0, 220, 114
+STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "Please choose the account that the history will import to:",IDC_STATIC,5,5,210,8
+    LTEXT           "There is no MSN account...",IDC_NOMSNACCOUNT,5,101,88,8,NOT WS_VISIBLE
+    LISTBOX         IDC_ACCLIST,5,17,210,78,NOT LBS_NOTIFY | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL | WS_VSCROLL | WS_TABSTOP
 END
 
 
@@ -161,14 +151,6 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO 
 BEGIN
-    IDD_IMPORTTYPE, DIALOG
-    BEGIN
-        LEFTMARGIN, 5
-        RIGHTMARGIN, 215
-        TOPMARGIN, 5
-        BOTTOMMARGIN, 109
-    END
-
     IDD_INTRO, DIALOG
     BEGIN
         LEFTMARGIN, 5
@@ -222,12 +204,18 @@ BEGIN
         VERTGUIDE, 10
         VERTGUIDE, 45
         VERTGUIDE, 110
-        VERTGUIDE, 120
         VERTGUIDE, 175
         TOPMARGIN, 3
         HORZGUIDE, 16
-        HORZGUIDE, 34
-        HORZGUIDE, 104
+        HORZGUIDE, 98
+    END
+
+    IDD_IMPORTACC, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 215
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 109
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -240,7 +228,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_IMPORT              ICON                    "import.ico"
+IDI_WLMIMPORT           ICON                    "import.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -248,8 +236,8 @@ IDI_IMPORT              ICON                    "import.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,2,0
- PRODUCTVERSION 0,1,2,0
+ FILEVERSION 0,8,0,0
+ PRODUCTVERSION 0,8,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -265,13 +253,13 @@ BEGIN
         BLOCK "000004b0"
         BEGIN
             VALUE "CompanyName", " "
-            VALUE "FileDescription", "Imports messages from Windows Live Messenger."
-            VALUE "FileVersion", "0.1.2.0"
+            VALUE "FileDescription", "Imports message history from Windows Live Messenger."
+            VALUE "FileVersion", "0.8.0.0"
             VALUE "InternalName", "wlmHistoryImport"
-            VALUE "LegalCopyright", "Copyright (C) 2008  Very Crazy Dog"
+            VALUE "LegalCopyright", "Copyright (C) 2008 - 2009  Very Crazy Dog"
             VALUE "OriginalFilename", "wlmHistoryImport.dll"
             VALUE "ProductName", "Windows Live Messenger History Import Plugin"
-            VALUE "ProductVersion", "0.1.2.0"
+            VALUE "ProductVersion", "0.8.0.0"
         END
     END
     BLOCK "VarFileInfo"
