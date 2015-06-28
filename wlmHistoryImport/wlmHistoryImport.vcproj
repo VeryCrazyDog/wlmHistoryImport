@@ -519,10 +519,6 @@
 				RelativePath=".\docs\Changelog.txt"
 				>
 			</File>
-			<File
-				RelativePath=".\docs\Readme.txt"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="XMLParser"
