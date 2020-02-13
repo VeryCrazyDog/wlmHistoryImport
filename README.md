@@ -49,4 +49,4 @@ messages in Miranda IM profile.
 # License
 Copyright (C) 2008 - 2009  Very Crazy Dog (VCD)
 
-This plugin is released under [GPL] (http://www.gnu.org/licenses/gpl-3.0.en.html).
+This plugin is released under [GPL](http://www.gnu.org/licenses/gpl-3.0.en.html).
