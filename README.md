@@ -3,10 +3,10 @@ Windows Live Messenger History Import Plugin for [Miranda IM] (http://www.mirand
 
 Tested on Miranda IM 0.8.1 on Windows XP with with Windows Live Messenger 8.1 and 8.5 message history.
 
-#Acknowledge
+# Acknowledge
 This plugin is based on import.dll plugin that is developed by Miranda team.
 
-#Current Limitation
+# Current Limitation
 - Not able to handle contacts with the same email account name but with 
   different email provider. For example, "ABC@yahoo.com" and "ABC@gmail.com".
   In such cases, the message history from both "ABC@yahoo.com" and 
